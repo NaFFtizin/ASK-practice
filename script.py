@@ -62,7 +62,7 @@ def Get_Json(Link, Name):
 def Get_DATA():
     if not os.path.exists("Input"):
         os.mkdir("Input");
-    print("OG")
+    #print("OG")
     #Получение точек продаж
     Get_Json("https://api.moysklad.ru/api/remap/1.2/entity/retailstore", "retailstore")
     #Получение Продаж
@@ -82,7 +82,7 @@ def Put_DATA():
         data = json.load(read_file)
     for txt in data['rows']:
         print(txt["id"] + ' ' + txt["name"])
-        cursor.execute('INSERT INTO RetailStores (id, name) VALUES (?, ?)', (txt["id"], txt["name"]))
+        cursor.execute('INSERT OR IGNORE INTO RetailStores (id, name) VALUES (?, ?)', (txt["id"], txt["name"]))
     connection.commit()
     connection.close()
     
@@ -97,7 +97,7 @@ def Put_DATA():
         for txt1 in data1:
              if txt1['assortmentId'] == txt['id']:
                  value = str(txt["salePrices"][0]["value"])
-                 cursor.execute('INSERT INTO Products (id, name, cost, countinstock) VALUES (?, ?, ?, ?)', (txt["id"], txt["name"], value, txt1["stock"]))
+                 cursor.execute('INSERT OR IGNORE INTO Products (id, name, cost, countinstock) VALUES (?, ?, ?, ?)', (txt["id"], txt["name"], value, txt1["stock"]))
     connection.commit()
     connection.close()
     
@@ -121,7 +121,7 @@ def Put_DATA():
         result = response.json()
         product_id = result["id"]
         
-        cursor.execute('INSERT INTO RetailDemands (id, product_id, count, retailstore_id, datetime) VALUES (?, ?, ?, ?, ?)', (txt["id"], product_id, count, retailstore_id, txt["moment"]))
+        cursor.execute('INSERT OR IGNORE INTO RetailDemands (id, product_id, count, retailstore_id, datetime) VALUES (?, ?, ?, ?, ?)', (txt["id"], product_id, count, retailstore_id, txt["moment"]))
     connection.commit()
     connection.close()
     
@@ -144,7 +144,7 @@ def Put_DATA():
         response = requests.get(result['rows'][0]["assortment"]["meta"]["href"], headers=headers)
         result = response.json()
         product_id = result["id"]
-        cursor.execute('INSERT INTO RetailSalesReturns (id, product_id, count, retailstore_id, datetime) VALUES (?, ?, ?, ?, ?)', (txt["id"], product_id, count, retailstore_id, txt["moment"]))
+        cursor.execute('INSERT OR IGNORE INTO RetailSalesReturns (id, product_id, count, retailstore_id, datetime) VALUES (?, ?, ?, ?, ?)', (txt["id"], product_id, count, retailstore_id, txt["moment"]))
     connection.commit()
     connection.close()
 
@@ -193,6 +193,7 @@ def GiveOut_Orders(data):
     with open("Output/retailsalesreturn.json", "w") as write_file:
         data = json.load(write_file)
         json.dump(data, write_file, ensure_ascii = False, indent='\t')
+
     
 
 IsWorking = True
@@ -206,7 +207,9 @@ while IsWorking:
     if timenow != [1, 0]:
         #вторник-суббота
         if weekday > 1 and weekday < 7:
-            daystep = -1
+            Get_DATA()
+            Put_DATA()
+            daystep = -3
             result_list = []
             connection = sqlite3.connect('Database/database.db')
             connection.row_factory = lambda cursor, row: row[0]
@@ -227,6 +230,8 @@ while IsWorking:
             connection.close()
         #понедельник
         elif weekday == 1:
+            Get_DATA()
+            Put_DATA()
             daystep = -2
             result_list = []
             connection = sqlite3.connect('Database/database.db')
@@ -248,3 +253,4 @@ while IsWorking:
         time.sleep(60)
     
     time.sleep(1)
+
